@@ -536,9 +536,49 @@ function loadYearRecords() {
       <div style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid #ddd;">
         <strong>${item.date}｜${item.mode}</strong>
         <pre>${item.report}</pre>
+
+        <button class="secondary" onclick="editRecord('${item.date}', '${item.mode}')">
+          更正此筆紀錄
+        </button>
+
+        <button class="danger" onclick="deleteRecord('${item.date}', '${item.mode}')">
+          刪除此筆紀錄
+        </button>
       </div>
     `).join("")}
   `;
+}
+
+function editRecord(date, modeText) {
+  document.getElementById("workDate").value = date;
+
+  if (modeText === "早班工作事項") {
+    switchMode("morning");
+  } else if (modeText === "閉店工作事項") {
+    switchMode("closing");
+  } else {
+    switchMode("warehouse");
+  }
+
+  alert("已切換到該日期與事項，請重新勾選後，再按「儲存當日紀錄」即可覆蓋更新。");
+}
+
+function deleteRecord(date, modeText) {
+  if (!confirm("確定要刪除此筆紀錄嗎？")) return;
+
+  const historyKey = "LOVIN_YEAR_HISTORY";
+  const history = JSON.parse(localStorage.getItem(historyKey)) || [];
+
+  const filtered = history.filter(item => {
+    return !(item.date === date &&
+             item.store === currentStore &&
+             item.mode === modeText);
+  });
+
+  localStorage.setItem(historyKey, JSON.stringify(filtered));
+  loadYearRecords();
+
+  alert("此筆紀錄已刪除。");
 }
 
 initDateAndYear();
