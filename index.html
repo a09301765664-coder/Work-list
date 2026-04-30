@@ -139,7 +139,7 @@
 <div class="container">
 
   <h1>LOVIN 門市每日工作檢查工具</h1>
-  <div class="subtitle">每日 / 每月 / 每年紀錄｜早班與閉店事項</div>
+  <div class="subtitle">每日 / 每月 / 每年紀錄｜早班、閉店與倉庫事項</div>
 
   <div class="card">
     <h2>選擇門市</h2>
@@ -152,6 +152,7 @@
 
   <div class="card">
     <h2>選擇日期</h2>
+
     <label>每日日期</label>
     <input type="date" id="workDate" onchange="renderChecklist()" />
 
@@ -176,10 +177,11 @@
   </div>
 
   <div class="card">
-    <h2>選擇工作時段</h2>
+    <h2>選擇工作事項</h2>
     <div class="buttonGroup">
       <button id="morningBtn" class="active" onclick="switchMode('morning')">早班事項</button>
       <button id="closingBtn" onclick="switchMode('closing')">閉店事項</button>
+      <button id="warehouseBtn" onclick="switchMode('warehouse')">倉庫事項</button>
     </div>
   </div>
 
@@ -256,38 +258,39 @@ const closingCommonItems = [
   "群組回報閉店工作事項完成✅"
 ];
 
-const warehouseRules = [
-  "【倉庫公約】空紙箱需割開並於當天丟棄，不可留到隔天",
-  "【倉庫公約】補貨後，需將剩餘數量確實寫在紙箱或白紙上",
-  "【倉庫公約】紙箱內剩餘1至2包商品時，需直接拿出補至櫃上；松菸店可放置於紙箱上方",
-  "【倉庫公約】任何備品即將不足時，需寫便條紙貼在POS機旁提醒補貨",
-  "【倉庫公約】即使商品效期相同，也需確實執行先進先出",
-  "【倉庫公約】進貨時若發現新效期商品，需貼上醒目便條紙，標註「新」與效期日期",
-  "【倉庫公約】紙箱上的便條紙若已寫滿或不清楚，需立即更換新的便條紙",
-  "【倉庫公約】同品項商品需集中擺放，袋裝歸袋裝、罐裝歸罐裝，不可混放",
-  "【倉庫公約】櫃上檯面若有缺貨，需立即補貨至櫃上",
-  "【倉庫商品擺放】因倉庫環境較悶熱，除新效期商品需往下擺放外，同效期商品也需確實先進先出",
-  "【倉庫商品擺放】最底層紙箱需輪流拿上來使用，避免長時間放置導致油耗味或品質變化"
+const warehouseItems = [
+  "空紙箱需拆解後，當天丟棄，不得堆積",
+  "補貨完成後，需將剩餘數量清楚標示於紙箱或白紙上",
+  "紙箱內若僅剩1～2包商品，請直接補至櫃上",
+  "任何備品即將用完時，需寫便條紙貼於POS機上提醒補貨",
+  "商品一律遵守先進先出原則，即使效期相同也需執行",
+  "進貨時若發現新效期商品，需貼紙條標示「新＋日期」，字體需清楚明顯",
+  "紙箱上的便條紙若已寫滿或不清晰，需立即更換新紙張",
+  "同品項商品需集中擺放，不得混放；袋裝歸袋裝，罐裝歸罐裝",
+  "櫃上檯面如有缺貨，需立即補貨上架，不得放置不處理",
+  "新效期商品需放置於下層",
+  "同效期商品仍需確實執行先進先出",
+  "最底層紙箱需定期輪替使用，避免商品長時間放置"
 ];
 
 function getDateInfoItems() {
   const dateValue = getSelectedDate();
   const date = new Date(dateValue + "T00:00:00");
   const day = date.getDay();
-
   const items = [];
 
   if (day === 2 || day === 5) {
-    items.push("【每週二、五進貨日】當天進貨同仁需確認新效期商品一律擺放下方，舊效期擺放上方，確實執行先進先出");
-    items.push("【每週二、五進貨日】進貨完成後，需檢查商品數量、效期與擺放位置是否正確");
+    items.push("【進貨日】今日為每週二、五進貨日，需確認進貨品項、數量與效期");
+    items.push("【進貨日】新效期商品放下層，舊效期商品放上層，確實執行先進先出");
   }
 
   if (day === 0 || day === 4) {
-    items.push("【每週日、四盤點日】當天上班同仁需完成盤點並確認叫貨需求");
-    items.push("【每週日、四盤點日】每日中午12點前需完成叫貨，缺貨品項請回報至群組，逾期不再補貨");
+    items.push("【盤點日】今日為每週日、四盤點日，需完成庫存盤點");
+    items.push("【盤點日】每日中午12點前完成叫貨");
+    items.push("【盤點日】群組回報缺貨商品");
   }
 
-  items.push("【國定假日調整提醒】若進貨日或盤點日遇國定假日，日期需往前調整；國定假日當天若放假不進貨，則放假前一天進貨，放假前兩天需完成盤點");
+  items.push("【國定假日提醒】若進貨日遇國定假日且當天放假，進貨日需提前至放假前一天；盤點日需提前至放假前兩天。例如：5/1週五勞動節放假，進貨改為4/30週四，盤點改為4/29週三");
 
   return items;
 }
@@ -318,22 +321,21 @@ function getStoreSpecificItems() {
 }
 
 function getItems() {
-  const dateItems = getDateInfoItems();
-
   if (currentMode === "morning") {
     return [
       ...morningItems,
-      ...dateItems,
-      ...warehouseRules
+      ...getDateInfoItems()
     ];
+  }
+
+  if (currentMode === "warehouse") {
+    return warehouseItems;
   }
 
   return [
     ...closingCommonItems.slice(0, 4),
     ...getStoreSpecificItems(),
-    ...closingCommonItems.slice(4),
-    ...dateItems,
-    ...warehouseRules
+    ...closingCommonItems.slice(4)
   ];
 }
 
@@ -384,13 +386,17 @@ function switchMode(mode) {
 
   document.getElementById("morningBtn").classList.remove("active");
   document.getElementById("closingBtn").classList.remove("active");
+  document.getElementById("warehouseBtn").classList.remove("active");
 
   if (mode === "morning") {
     document.getElementById("morningBtn").classList.add("active");
     document.getElementById("checklistTitle").innerText = "早班工作事項";
-  } else {
+  } else if (mode === "closing") {
     document.getElementById("closingBtn").classList.add("active");
     document.getElementById("checklistTitle").innerText = "閉店工作事項";
+  } else {
+    document.getElementById("warehouseBtn").classList.add("active");
+    document.getElementById("checklistTitle").innerText = "倉庫工作事項";
   }
 
   renderChecklist();
@@ -441,9 +447,15 @@ function updateProgress() {
   generateReport(percent, checkedItems.length, items.length);
 }
 
+function getModeText() {
+  if (currentMode === "morning") return "早班工作事項";
+  if (currentMode === "closing") return "閉店工作事項";
+  return "倉庫工作事項";
+}
+
 function generateReport(percent, completed, total) {
   const date = getSelectedDate();
-  const modeText = currentMode === "morning" ? "早班工作事項" : "閉店工作事項";
+  const modeText = getModeText();
   const finalText = percent === 100 ? "已全數完成✅" : "尚未全數完成⚠️";
 
   document.getElementById("reportText").value =
@@ -472,7 +484,7 @@ function resetChecklist() {
 
 function saveRecord() {
   const date = getSelectedDate();
-  const modeText = currentMode === "morning" ? "早班" : "閉店";
+  const modeText = getModeText();
   const report = document.getElementById("reportText").value;
 
   const historyKey = "LOVIN_YEAR_HISTORY";
