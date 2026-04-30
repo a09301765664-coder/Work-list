@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LOVIN 門市每日工作檢查工具</title>
+
+<style>
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif;
+    background: #f6f3ec;
+    color: #3b3328;
+  }
+
+  .container {
+    max-width: 820px;
+    margin: auto;
+    padding: 18px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 25px;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #8b7c65;
+    margin-bottom: 18px;
+  }
+
+  .card {
+    background: #fffaf1;
+    border-radius: 20px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  }
+
+  .buttonGroup {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .buttonGroup button {
+    flex: 1;
+  }
+
+  button, input, select, textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 14px;
+    border: 1px solid #d8c9ad;
+    padding: 12px;
+    font-size: 16px;
+    margin-top: 8px;
+  }
+
+  button {
+    background: #7f9c72;
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  button.active {
+    background: #3f6f4f;
+  }
+
+  button.secondary {
+    background: #b79b68;
+  }
+
+  button.danger {
+    background: #a75d5d;
+  }
+
+  .item {
+    display: flex;
+    gap: 10px;
+    padding: 11px 0;
+    border-bottom: 1px solid #eadfca;
+  }
+
+  .item input {
+    width: auto;
+    transform: scale(1.25);
+    margin-top: 5px;
+  }
+
+  .item label {
+    line-height: 1.5;
+  }
+
+  .progressBox {
+    background: #e8dfca;
+    border-radius: 999px;
+    overflow: hidden;
+    height: 18px;
+    margin-top: 12px;
+  }
+
+  .progress {
+    height: 100%;
+    background: #7f9c72;
+    width: 0%;
+    transition: 0.3s;
+  }
+
+  .status {
+    font-weight: bold;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  textarea {
+    min-height: 120px;
+    background: white;
+  }
+
+  .note {
+    color: #7b6d58;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  pre {
+    white-space: pre-wrap;
+    font-family: inherit;
+  }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <h1>LOVIN 門市每日工作檢查工具</h1>
+  <div class="subtitle">每日 / 每年紀錄｜早班與閉店事項</div>
+
+  <div class="card">
+    <h2>選擇門市</h2>
+    <div class="buttonGroup">
+      <button id="store_中山店" class="active" onclick="switchStore('中山店')">中山店</button>
+      <button id="store_松菸店" onclick="switchStore('松菸店')">松菸店</button>
+      <button id="store_北車店" onclick="switchStore('北車店')">北車店</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>選擇日期</h2>
+    <label>每日日期</label>
+    <input type="date" id="workDate" onchange="renderChecklist()" />
+
+    <label>年份紀錄</label>
+    <select id="yearSelect" onchange="loadYearRecords()"></select>
+  </div>
+
+  <div class="card">
+    <h2>選擇工作時段</h2>
+    <div class="buttonGroup">
+      <button id="morningBtn" class="active" onclick="switchMode('morning')">早班事項</button>
+      <button id="closingBtn" onclick="switchMode('closing')">閉店事項</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="checklistTitle">早班工作事項</h2>
+    <div id="checklist"></div>
+
+    <div class="progressBox">
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <div class="status" id="statusText">完成度：0%</div>
+  </div>
+
+  <div class="card">
+    <h2>群組回報文字</h2>
+    <textarea id="reportText" readonly></textarea>
+    <button onclick="copyReport()">一鍵複製回報文字</button>
+  </div>
+
+  <div class="card">
+    <button class="secondary" onclick="saveRecord()">儲存當日紀錄</button>
+    <button class="danger" onclick="resetChecklist()">清空此日期勾選</button>
+  </div>
+
+  <div class="card">
+    <h2>年度完成紀錄</h2>
+    <div id="yearRecords" class="note">尚無紀錄</div>
+  </div>
+
+</div>
+
+<script>
+let currentStore = "中山店";
+let currentMode = "morning";
+
+const morningItems = [
+  "打卡",
+  "點收零用金",
+  "檢查發票、刷卡單，少於2卷需補充",
+  "檢查日報表、退稅單，少於一半需補充",
+  "補齊隨手包",
+  "補齊罐裝",
+  "補齊袋裝",
+  "補齊蛋捲",
+  "補齊茶包禮盒",
+  "補齊不織布、紙袋、塑膠袋、七入袋",
+  "檢查商品效期，確實執行先進先出",
+  "整理檯面",
+  "打掃環境",
+  "清除灰塵",
+  "開試吃後，籃子使用濕紙巾擦拭乾淨",
+  "群組回報早班工作事項完成✅"
+];
+
+const closingCommonItems = [
+  "杯子每日清洗，需使用洗碗精",
+  "試吃盤使用濕紙巾擦拭",
+  "假日雙人配班時，杯蓋需清洗；平日使用酒精擦拭",
+  "金條隨手包需整個拿起來，使用濕紙巾擦拭桌面，不可用酒精",
+  "罐裝庫存至少維持一半",
+  "有販售禮盒皆需補齊，陳列檯面與庫存皆要補",
+  "依照『賣什麼補什麼』原則補貨",
+  "紙袋、不織布、塑膠袋、粉色七入袋，少於一半需補充",
+  "紙箱與垃圾當天丟棄，不可留到隔天",
+  "清機",
+  "刷卡明細記得列印",
+  "櫃子周圍噴漂白水消毒",
+  "關燈",
+  "蓋布",
+  "打卡",
+  "滅鼠器打開",
+  "平板記得充電",
+  "群組回報閉店工作事項完成✅"
+];
+
+function getStoreSpecificItems() {
+  if (currentStore === "中山店") {
+    return [
+      "中山店：隨手包每個品項最少需有3袋",
+      "中山店：袋裝庫存可依存放空間適量補貨"
+    ];
+  }
+
+  if (currentStore === "松菸店") {
+    return [
+      "松菸店：隨手包每個品項最少需有2袋",
+      "松菸店：袋裝庫存每個品項最少需有10包",
+      "松菸店：金條一定要拿起來擦整個桌面，需確實擦拭乾淨"
+    ];
+  }
+
+  if (currentStore === "北車店") {
+    return [
+      "北車店：隨手包每個品項最少需有2袋",
+      "北車店：袋裝庫存依現場空間補足",
+      "北車店：收銀區與動線周邊需保持整齊"
+    ];
+  }
+
+  return [];
+}
+
+function getItems() {
+  if (currentMode === "morning") {
+    return morningItems;
+  }
+
+  return [
+    ...closingCommonItems.slice(0, 4),
+    ...getStoreSpecificItems(),
+    ...closingCommonItems.slice(4)
+  ];
+}
+
+function todayDate() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function getSelectedDate() {
+  return document.getElementById("workDate").value || todayDate();
+}
+
+function getStorageKey() {
+  return `LOVIN_${getSelectedDate()}_${currentStore}_${currentMode}`;
+}
+
+function initDateAndYear() {
+  document.getElementById("workDate").value = todayDate();
+
+  const yearSelect = document.getElementById("yearSelect");
+  const currentYear = new Date().getFullYear();
+
+  for (let y = currentYear - 2; y <= currentYear + 2; y++) {
+    const option = document.createElement("option");
+    option.value = y;
+    option.textContent = y + "年";
+    if (y === currentYear) option.selected = true;
+    yearSelect.appendChild(option);
+  }
+}
+
+function switchStore(store) {
+  currentStore = store;
+
+  ["中山店", "松菸店", "北車店"].forEach(s => {
+    document.getElementById("store_" + s).classList.remove("active");
+  });
+
+  document.getElementById("store_" + store).classList.add("active");
+
+  renderChecklist();
+}
+
+function switchMode(mode) {
+  currentMode = mode;
+
+  document.getElementById("morningBtn").classList.remove("active");
+  document.getElementById("closingBtn").classList.remove("active");
+
+  if (mode === "morning") {
+    document.getElementById("morningBtn").classList.add("active");
+    document.getElementById("checklistTitle").innerText = "早班工作事項";
+  } else {
+    document.getElementById("closingBtn").classList.add("active");
+    document.getElementById("checklistTitle").innerText = "閉店工作事項";
+  }
+
+  renderChecklist();
+}
+
+function renderChecklist() {
+  const checklist = document.getElementById("checklist");
+  const items = getItems();
+  const saved = JSON.parse(localStorage.getItem(getStorageKey())) || [];
+
+  checklist.innerHTML = "";
+
+  items.forEach((item, index) => {
+    const div = document.createElement("div");
+    div.className = "item";
+
+    const checked = saved.includes(index) ? "checked" : "";
+
+    div.innerHTML = `
+      <input type="checkbox" id="item${index}" ${checked} onchange="updateProgress()">
+      <label for="item${index}">${item}</label>
+    `;
+
+    checklist.appendChild(div);
+  });
+
+  updateProgress();
+  loadYearRecords();
+}
+
+function updateProgress() {
+  const items = getItems();
+  const checkedItems = [];
+
+  items.forEach((_, index) => {
+    const checkbox = document.getElementById(`item${index}`);
+    if (checkbox && checkbox.checked) {
+      checkedItems.push(index);
+    }
+  });
+
+  localStorage.setItem(getStorageKey(), JSON.stringify(checkedItems));
+
+  const percent = Math.round((checkedItems.length / items.length) * 100);
+  document.getElementById("progress").style.width = percent + "%";
+  document.getElementById("statusText").innerText = `完成度：${percent}%`;
+
+  generateReport(percent, checkedItems.length, items.length);
+}
+
+function generateReport(percent, completed, total) {
+  const date = getSelectedDate();
+  const modeText = currentMode === "morning" ? "早班工作事項" : "閉店工作事項";
+  const finalText = percent === 100 ? "已全數完成✅" : "尚未全數完成⚠️";
+
+  document.getElementById("reportText").value =
+`${date}
+${currentStore}｜${modeText}
+
+完成進度：${completed}/${total}
+完成度：${percent}%
+
+${finalText}`;
+}
+
+function copyReport() {
+  const text = document.getElementById("reportText");
+  text.select();
+  document.execCommand("copy");
+  alert("回報文字已複製！");
+}
+
+function resetChecklist() {
+  if (!confirm("確定要清空此日期的勾選紀錄嗎？")) return;
+
+  localStorage.removeItem(getStorageKey());
+  renderChecklist();
+}
+
+function saveRecord() {
+  const date = getSelectedDate();
+  const modeText = currentMode === "morning" ? "早班" : "閉店";
+  const report = document.getElementById("reportText").value;
+
+  const historyKey = "LOVIN_YEAR_HISTORY";
+  const history = JSON.parse(localStorage.getItem(historyKey)) || [];
+
+  const newRecord = {
+    date,
+    year: date.slice(0, 4),
+    store: currentStore,
+    mode: modeText,
+    report
+  };
+
+  const filtered = history.filter(item => {
+    return !(item.date === date && item.store === currentStore && item.mode === modeText);
+  });
+
+  filtered.unshift(newRecord);
+
+  localStorage.setItem(historyKey, JSON.stringify(filtered));
+
+  alert("當日紀錄已儲存！");
+  loadYearRecords();
+}
+
+function loadYearRecords() {
+  const selectedYear = document.getElementById("yearSelect").value;
+  const history = JSON.parse(localStorage.getItem("LOVIN_YEAR_HISTORY")) || [];
+
+  const records = history.filter(item => item.year === selectedYear);
+
+  const div = document.getElementById("yearRecords");
+
+  if (records.length === 0) {
+    div.innerHTML = "尚無紀錄";
+    return;
+  }
+
+  div.innerHTML = records.map(item => `
+    <div style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid #ddd;">
+      <strong>${item.date}｜${item.store}｜${item.mode}</strong>
+      <pre>${item.report}</pre>
+    </div>
+  `).join("");
+}
+
+initDateAndYear();
+renderChecklist();
+</script>
+
+</body>
+</html>
