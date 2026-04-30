@@ -139,7 +139,7 @@
 <div class="container">
 
   <h1>LOVIN 門市每日工作檢查工具</h1>
-  <div class="subtitle">每日 / 每年紀錄｜早班與閉店事項</div>
+  <div class="subtitle">每日 / 每月 / 每年紀錄｜早班與閉店事項</div>
 
   <div class="card">
     <h2>選擇門市</h2>
@@ -157,6 +157,22 @@
 
     <label>年份紀錄</label>
     <select id="yearSelect" onchange="loadYearRecords()"></select>
+
+    <label>月份紀錄</label>
+    <select id="monthSelect" onchange="loadYearRecords()">
+      <option value="01">1月</option>
+      <option value="02">2月</option>
+      <option value="03">3月</option>
+      <option value="04">4月</option>
+      <option value="05">5月</option>
+      <option value="06">6月</option>
+      <option value="07">7月</option>
+      <option value="08">8月</option>
+      <option value="09">9月</option>
+      <option value="10">10月</option>
+      <option value="11">11月</option>
+      <option value="12">12月</option>
+    </select>
   </div>
 
   <div class="card">
@@ -190,7 +206,7 @@
   </div>
 
   <div class="card">
-    <h2>年度完成紀錄</h2>
+    <h2>門市月度完成紀錄</h2>
     <div id="yearRecords" class="note">尚無紀錄</div>
   </div>
 
@@ -240,6 +256,42 @@ const closingCommonItems = [
   "群組回報閉店工作事項完成✅"
 ];
 
+const warehouseRules = [
+  "【倉庫公約】空紙箱需割開並於當天丟棄，不可留到隔天",
+  "【倉庫公約】補貨後，需將剩餘數量確實寫在紙箱或白紙上",
+  "【倉庫公約】紙箱內剩餘1至2包商品時，需直接拿出補至櫃上；松菸店可放置於紙箱上方",
+  "【倉庫公約】任何備品即將不足時，需寫便條紙貼在POS機旁提醒補貨",
+  "【倉庫公約】即使商品效期相同，也需確實執行先進先出",
+  "【倉庫公約】進貨時若發現新效期商品，需貼上醒目便條紙，標註「新」與效期日期",
+  "【倉庫公約】紙箱上的便條紙若已寫滿或不清楚，需立即更換新的便條紙",
+  "【倉庫公約】同品項商品需集中擺放，袋裝歸袋裝、罐裝歸罐裝，不可混放",
+  "【倉庫公約】櫃上檯面若有缺貨，需立即補貨至櫃上",
+  "【倉庫商品擺放】因倉庫環境較悶熱，除新效期商品需往下擺放外，同效期商品也需確實先進先出",
+  "【倉庫商品擺放】最底層紙箱需輪流拿上來使用，避免長時間放置導致油耗味或品質變化"
+];
+
+function getDateInfoItems() {
+  const dateValue = getSelectedDate();
+  const date = new Date(dateValue + "T00:00:00");
+  const day = date.getDay();
+
+  const items = [];
+
+  if (day === 2 || day === 5) {
+    items.push("【每週二、五進貨日】當天進貨同仁需確認新效期商品一律擺放下方，舊效期擺放上方，確實執行先進先出");
+    items.push("【每週二、五進貨日】進貨完成後，需檢查商品數量、效期與擺放位置是否正確");
+  }
+
+  if (day === 0 || day === 4) {
+    items.push("【每週日、四盤點日】當天上班同仁需完成盤點並確認叫貨需求");
+    items.push("【每週日、四盤點日】每日中午12點前需完成叫貨，缺貨品項請回報至群組，逾期不再補貨");
+  }
+
+  items.push("【國定假日調整提醒】若進貨日或盤點日遇國定假日，日期需往前調整；國定假日當天若放假不進貨，則放假前一天進貨，放假前兩天需完成盤點");
+
+  return items;
+}
+
 function getStoreSpecificItems() {
   if (currentStore === "中山店") {
     return [
@@ -258,8 +310,6 @@ function getStoreSpecificItems() {
 
   if (currentStore === "北車店") {
     return [
-      "北車店：隨手包每個品項最少需有2袋",
-      "北車店：袋裝庫存依現場空間補足",
       "北車店：收銀區與動線周邊需保持整齊"
     ];
   }
@@ -268,14 +318,22 @@ function getStoreSpecificItems() {
 }
 
 function getItems() {
+  const dateItems = getDateInfoItems();
+
   if (currentMode === "morning") {
-    return morningItems;
+    return [
+      ...morningItems,
+      ...dateItems,
+      ...warehouseRules
+    ];
   }
 
   return [
     ...closingCommonItems.slice(0, 4),
     ...getStoreSpecificItems(),
-    ...closingCommonItems.slice(4)
+    ...closingCommonItems.slice(4),
+    ...dateItems,
+    ...warehouseRules
   ];
 }
 
@@ -293,6 +351,9 @@ function getStorageKey() {
 
 function initDateAndYear() {
   document.getElementById("workDate").value = todayDate();
+
+  const month = todayDate().slice(5, 7);
+  document.getElementById("monthSelect").value = month;
 
   const yearSelect = document.getElementById("yearSelect");
   const currentYear = new Date().getFullYear();
@@ -420,6 +481,7 @@ function saveRecord() {
   const newRecord = {
     date,
     year: date.slice(0, 4),
+    month: date.slice(5, 7),
     store: currentStore,
     mode: modeText,
     report
@@ -439,23 +501,32 @@ function saveRecord() {
 
 function loadYearRecords() {
   const selectedYear = document.getElementById("yearSelect").value;
+  const selectedMonth = document.getElementById("monthSelect").value;
   const history = JSON.parse(localStorage.getItem("LOVIN_YEAR_HISTORY")) || [];
 
-  const records = history.filter(item => item.year === selectedYear);
+  const records = history.filter(item => {
+    return item.year === selectedYear &&
+           item.month === selectedMonth &&
+           item.store === currentStore;
+  });
 
   const div = document.getElementById("yearRecords");
 
   if (records.length === 0) {
-    div.innerHTML = "尚無紀錄";
+    div.innerHTML = `${currentStore}｜${selectedYear}年${Number(selectedMonth)}月尚無紀錄`;
     return;
   }
 
-  div.innerHTML = records.map(item => `
-    <div style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid #ddd;">
-      <strong>${item.date}｜${item.store}｜${item.mode}</strong>
-      <pre>${item.report}</pre>
-    </div>
-  `).join("");
+  div.innerHTML = `
+    <strong>${currentStore}｜${selectedYear}年${Number(selectedMonth)}月完成紀錄</strong>
+    <br><br>
+    ${records.map(item => `
+      <div style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid #ddd;">
+        <strong>${item.date}｜${item.mode}</strong>
+        <pre>${item.report}</pre>
+      </div>
+    `).join("")}
+  `;
 }
 
 initDateAndYear();
